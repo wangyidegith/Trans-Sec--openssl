@@ -1,0 +1,38 @@
+PKCS #5
+（零）概念
+0 定义密码基于密码的密钥派生和加密标准，提供一种通过密码生成密钥的方法。
+
+1 注意：这个算法并不用于生成私钥，而是用于生成对称密钥
+
+2 salt & iv
+区别：
+（0）名称：salt叫盐，iv叫初始化向量;
+（1）场景：salt用于生成密钥比如pbkdf2，iv用于生成密文比如aes;
+（2）作用：salt用于防止用户输入弱口令导致的暴力破解，iv用来防止模式分析;
+（3）位置：salt可以和密码中一起存，如果是不指定的salt，openssl将其与密文一起存储，iv和密文一起存储;
+（4）保密性：salt是要保密的，它就相当于是密码的增强参数，是作为密码的一部分的，iv无需保密，因为iv用来确保同一明文每次生成的密文不一样，黑客就算拿到iv也解不了密的;
+共同点：
+（0）唯一的共同点是：salt和iv都需要确保唯一性，就是每次都不一样。
+
+
+
+（一）生成对称密钥
+0 不指定salt：openssl enc -aes-256-cbc -pbkdf2 -k your_password -P -md sha256 -salt
+注：
+（0）-P：不进行加解密只打印salt、key、iv;
+（1）-md：指定摘要算法;
+（2）默认就是-salt，所以你写不写-salt都一样，如果你不想使用salt，可以-nosalt;
+（3）默认会带iv，而且不能禁用，任何模式都是包括ecb。
+1 指定salt：
+（0）openssl rand -hex 8
+（1）openssl enc -aes-256-cbc -pbkdf2 -k your_password -P -md sha256 -S a生成的盐值
+
+
+
+（二）aes加解密(假设ecb)：
+0 加密
+（1）openssl rand -hex 8
+（2）openssl enc -aes-128-ecb -in plaintext.txt -out ciphertext.bin -pbkdf2 -iter 100000 -k your_password -S a生成的盐值
+1 解密
+openssl enc -d -aes-128-ecb -in ciphertext.bin -out decrypted.txt -pbkdf2 -iter 100000 -k your_password -S a生成的盐值
+

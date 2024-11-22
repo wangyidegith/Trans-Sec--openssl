@@ -1,0 +1,30 @@
+0 basic option and operation
+(1) version: -tls1 -tls1_1 -tls1_2 -tls1_3
+
+(2)how to quit: QUIT
+
+(3) notice: -accept == -port in s_server
+
+
+
+1 start a tls server
+(0) basic: openssl s_server -key <server.key> -cert <server.crt> -port <4433>
+
+(1) advanced options
+a -www: specify http
+b -cipher <'ECDHE-RSA-AES256-GCM-SHA384''>: specify cipher suit
+
+
+
+2 test connect
+(1) basic: openssl s_client -connect <example.com>:<4433>
+
+(2) advanced options
+a -msg | -debug: more debug
+b -CAfile: specify server.crt path
+c -servername <servername>: How to realize servername?
+
+(3) about sni
+a == virtual-host. For http, it is host-filed in http header, actually domain-name. In other protocol, servername can be arbitrary self-defined-string, but normally also domain-name.
+b openssl s_server dont supprt vitual-host, you can use nginx to config virtual-host, and use openssl s_client to test. 
+c realized nginx virtual-host theory.

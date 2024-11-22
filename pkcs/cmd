@@ -1,0 +1,311 @@
+零 概念
+0 PKCS（Public Key Cryptography Standards）是一系列由 RSA 实验室与其他合作伙伴制定的标准，旨在支持公开密钥密码学的应用。
+
+1 虽然PKCS是RSA实验室制作的，但是其中关于证书的命令和接口也可以用于其他密码学。
+
+2 pkcs已成为一套标准算法和协议，很多其他密码学库也实现了它，比如gmssl。
+
+
+
+
+
+
+一 PKCS #1
+(零) 概念：RSA 密钥的生成、加密、解密、签名和验证的具体算法。
+
+
+
+（一）生成
+0 生成私钥：openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+注意：rsa_keygen_bits have also 1024 3072 4096 8192, sec is more high with more bits, in addtion, bits below 2048 is view as not-sec.
+
+1 提取公钥从私钥中（换言之：私钥生成公钥）：openssl rsa -pubout -in private_key.pem -out public_key.pem
+
+
+
+(二) 加解密
+0 加密：openssl pkeyutl -encrypt -inkey public_key.pem -pubin -in plaintext.txt -out encrypted_data.bin
+
+1 解密：openssl pkeyutl -decrypt -inkey private_key.pem -in encrypted_data.bin -out decrypted.txt
+
+
+
+(三) 签名验签
+0 签名：openssl dgst -sha256 -sign private_key.pem -out sign.bin plaintext.txt
+
+1 验签：openssl dgst -sha256 -verify public_key.pem -signature sign.bin plaintext.txt
+
+
+
+
+
+
+
+二 PKCS #3
+（零）概念
+0 Diffie-Hellman 密钥交换协议，允许两方在不安全的渠道中安全地生成共享密钥。
+
+1 其实tls思路握手就是一个密钥交换协议，但是二者不一样。
+（0）tls的方法是：A给B一个明文字符串stra，B给A一个明文字符串strb和公钥，A用B给的公钥给一个premaster-secret加密，然后双方使用stra、strb、prematser-secret生成一个对称密钥，
+（1）PKCS#3的方法（基于离散对数）是：
+a 选择公开参数，大质数p和生成元g（通常小于p）;
+b 私钥生成：
+（a）A使用A的私钥ka生成其公钥pubka = g^ka mod p;
+（b）B使用B的私钥kb生成其公钥pubkb = g^kb mod p;
+c 双方提供网络交换公钥;
+d 生成共享密钥：
+（a）A使用B的公钥计算共享密钥k = pubkb^ka mod p;
+（b）B使用A的公钥计算共享密钥k = pubka^kb mod p;
+
+
+
+
+
+
+
+三 PKCS #5
+（零）概念
+0 定义基于密码的密钥派生和加密标准，提供一种通过密码生成密钥的方法。
+
+1 注意：这个算法并不用于生成私钥，而是用于生成对称密钥
+
+2 salt & iv
+区别：
+（0）名称：salt叫盐，iv叫初始化向量;
+（1）场景：salt用于生成密钥比如pbkdf2，iv用于生成密文比如aes;
+（2）作用：salt用于防止用户输入弱口令导致的暴力破解，iv用来防止模式分析;
+（3）位置：salt可以和密码中一起存，如果是不指定的salt，openssl将其与密文一起存储，iv和密文一起存储;
+（4）保密性：salt是要保密的，它就相当于是密码的增强参数，是作为密码的一部分的，iv无需保密，因为iv用来确保同一明文每次生成的密文不一样，黑客就算拿到iv也解不了密的;
+共同点：
+（0）唯一的共同点是：salt和iv都需要确保唯一性，就是每次都不一样。
+
+
+
+（一）生成对称密钥
+0 不指定salt：openssl enc -aes-256-cbc -pbkdf2 -k your_password -P -md sha256 -salt
+注：
+（0）-P：不进行加解密只打印salt、key、iv;
+（1）-md：指定摘要算法;
+（2）默认就是-salt，所以你写不写-salt都一样，如果你不想使用salt，可以-nosalt;
+（3）默认会带iv，而且不能禁用，任何模式都是包括ecb。
+1 指定salt：
+（0）openssl rand -hex 8
+（1）openssl enc -aes-256-cbc -pbkdf2 -k your_password -P -md sha256 -S a生成的盐值
+
+
+
+（二）aes加解密(假设ecb)：
+0 加密
+（1）openssl rand -hex 8
+（2）openssl enc -aes-128-ecb -in plaintext.txt -out ciphertext.bin -pbkdf2 -iter 100000 -k your_password -S a生成的盐值
+1 解密
+openssl enc -d -aes-128-ecb -in ciphertext.bin -out decrypted.txt -pbkdf2 -iter 100000 -k your_password -S a生成的盐值
+
+
+
+
+
+
+
+四 PKCS #7
+（零）概念：从算法逻辑上来看，和PKCS#1没有区别，都是用于签名和加解密，但是区别在于：
+0 7用于应用层，1不在应用层，换句话说，7提供了协议，1只是算法;
+
+1 所谓7提供了协议是指7生成的文件是包含原始消息、公钥、签名的，7需要定义协议的格式即怎么组织原始消息、公钥和签名及其他数据比如时间戳、签名者身份等信息为一个文件，7需要定义封装和解封的函数，1就相当于是7的底层组件;
+
+2 区别在签名验签服务器中有着充分的体现：签名验签服务器要求给定两套签名验签函数，一套用作数据签名验签（含多包），这便是1，一套用于消息的签名验签（不含多包），这是7。
+
+注意：由于这是应用层了，你懂的，PKCS#7只是提供了思路另外用于smime协议，cms协议，但是应用协议是可以随便定义的，比如PGP、JWT、TLS（想想第二次握手服务器给的包不就是一个包含原始消息、证书、签名及其他信息的包吗？那么服务器是不是要封装，客户端是不是要解析？）
+
+
+
+（一）加解密
+0 加密
+openssl smime -encrypt -in message.txt -out message.p7m -outform DER recipient_cert.crt
+
+1 解密
+openssl smime -decrypt -in message.p7m -inform DER -inkey private_key.pem -out decrypted_message.txt
+
+
+
+（二）签名验签
+0 签名
+openssl smime -sign -in message.txt -out message.p7m -signer cert.crt -inkey private.key -outform DER -nodetach
+注意：-nodetach沒有測試成功。
+
+1 验签
+openssl smime -verify -in message.p7m -inform DER -CAfile ca.pem -out verified_message.txt
+注：为什么mesage.p7m明明有证书了却还要在验证时指定证书，因为证书本身也需要验证啊，这个指定的证书就相当于tls第二次握手后客户端做验证时去寻找的信任存储一样。
+
+
+
+
+
+
+
+五 PKCS #8
+（零）概念：定义私钥的信息格式，包括可选的密码保护，用于存储和传输私钥。
+解释：一般而言，私钥是不传输的，但是如果非传输不可呢？那么就请使用PKCS#8。
+
+
+
+（一）测试
+0 openssl genrsa -out private.key 2048
+
+1 openssl pkcs8 -topk8 -inform PEM -in private.key -outform PEM -out private_key_pkcs8.pem -v2 aes256
+（0）-topk8：没啥意义，和pkcs8选项重复了，但是不可缺少;
+（1）-v2用来指定加密算法，但是其实你也可以使用-nocrypt指定不使用加密算法，但是这样的话pkcs8的意义就没有了。
+
+2 openssl pkcs8 -inform PEM -in private_key_pkcs8.pem -outform PEM -out private2.key
+
+
+
+
+
+
+
+六 PKCS #9
+（零）概念：定义与公钥证书相关的属性和扩展，提供公钥证书中使用的属性的标准化格式。
+注意：X509是国际电信联盟对PKCS#9的具体实现，已成为证书格式的事实标准。
+
+
+
+（一）生成X509格式的自签名证书
+0 单命令生成：generate self-sign cert: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout private.key -out certificate.crt -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=example.com"
+
+1 逐步生成
+（0）生成私钥：openssl genrsa -out private.key 2048
+（1）生成csr：openssl req -new -key private.key -out request.csr -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=example.com"
+注意：如果你不生成自签名证书，而是要去某个CA那里注册，那么到这就可以了，你接下来要去做的事情是，拿着request.csr去注册。
+（2）生成证书：openssl x509 -req -days 365 -in request.csr -signkey private.key -out certificate.crt
+
+
+（二）查看证书
+openssl x509 -in certificate.crt -text -noout
+注意：-noout指不输出base64编码的原证书内容，只显示解码后的证书内容。
+
+
+
+（三）生成和验证证书链
+0 生成一个根证书：openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout rca.key -out rca.crt -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=for-root-cert.com"
+
+1 生成一个由根证书签名的新证书
+（0）生成私钥：openssl genrsa -out new_private.key 2048
+（1）生成csr：openssl req -new -key new_private.key -out new_request.csr -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=for-not-root-cert.com"
+（2）由根证书给csr签名并生成一个用户证书：openssl x509 -req -in new_request.csr -CA rca.crt -CAkey rca.key -CAcreateserial -out user_certificate.crt -days 365 -sha256
+（3）由根证书给csr签名并生成一个中间证书（中间证书是要可以给其他证书签名的）：openssl x509 -req -in new_request.csr -CA rca.crt -CAkey rca.key -CAcreateserial -out middle_certificate.crt -days 365 -sha256 -extfile <(printf "[v3_ca]\nkeyUsage=critical, cRLSign, keyCertSign\nbasicConstraints=critical,CA:TRUE") -extensions v3_ca
+注意：
+（0）srl文件
+在该条命令执行后，会生成一个rca.srl文件；
+srl是serial的意思；
+该文件用来记录当前生成的证书的序列号，再次生成一个新的证书时，rca.srl += 1作为新证书的序列号；
+srl文件服务于证书管理，ca必须确保证书链中的每个证书号是唯一的；
+如果你想手动指定证书的序列号，可以使用-set_serial指定序列号。
+（1）上面是自签名证书给其他证书签名，自签名证书比较特殊，他本身自带允许给其他证书签名的扩展属性。但是非自签证书并非如此。
+
+2 使用根证书验证下级证书：openssl verify -CAfile rca.crt new_certificate.crt
+
+3 使用根证书验证下下级证书：openssl verify -CAfile rca.crt -untrusted middle_certificate.crt user_certificate.crt
+
+
+
+
+
+七 PKCS #10
+（零）概念：定义证书签名请求（CSR）格式，用于向证书颁发机构请求数字证书，包含请求者的公钥和身份信息。
+
+
+
+（一）生成X509格式的CSR
+0 生成私钥：openssl genrsa -out private.key 2048
+
+1 生成csr：openssl req -new -key private.key -out request.csr -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=example.com"
+
+
+
+
+
+
+
+注意：关于9和10也涉及我们这个文档和整个签名验签服务器的注册模块的最核心的一个点，那就是如何将生成的csr给到ca去注册并接受响应？
+0 格式：PKCS10
+
+1 传输协议：就是HTTP/HTTPS
+
+2 上面两点解决了，那么问题就解决了，可是新问题是：莫非前端需要用户填写ca吗？
+
+
+
+
+
+
+八 PKCS #11
+（零）概念：定义加密令牌接口，包括硬件安全模块（HSM）的接口标准。提供一种与加密设备（如智能卡和安全令牌）交互的标准化方法。
+
+
+
+
+
+
+
+九 PKCS #12
+（零）概念
+0 该标准或者说格式封装什么：私钥和证书;
+
+1 用途：用于存储和传输私钥和证书。
+（0）解释：私钥按理说不能在网络上传输但若是非传输不可，那么可以使用p8进行加密，p12相当于p8的一个进阶版本，p12封装了私钥和证书。那么，你想想，什么场景需要用到私钥和证书的封装呢：
+
+注意：注册响应拿到的信息是证书链（中间证书、用户证书），是不包含中间证书的私钥的，除了用户证书的私钥用户自己保存以外，根证书、中间证书的私钥都不可能在这种情况下传输的，第二次握手发送的也是证书链，而根证书本就存在浏览器的信任存储里。
+对注意的总结：这是一个对pki体系的相当深入的认识：证书在哪？（根证书在ca和验证方的信任存储而不被传输，中间证书在ca和被验证方的存储也会被传到验证方做验证，用户证书在ca和被验证方的存储也会被传到验证方做验证）私钥又在哪？（根证书私钥在ca，中间证书私钥在ca，用户证书私钥在用户）
+
+（1）客户端认证。
+（2）证书的备份恢复。
+（3）自动化部署。
+（4）web服务器的证书管理。
+
+
+
+2 和PFX的关系 == 9和X509的关系
+
+
+（一）生成客户端证书的打包文件以方便在网络上传输、在客户端进行存储和导入，其实这个应用场景也不是很常见，但是可以很好的说明问题，因为客户端证书一般是直接在本地嵌入到设备的，传输不是个常见的情况。
+0 假设ca的根证书是：openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout root.key -out root.crt -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=root-cert.com"
+
+1 服务器生成一个为了生成客户端证书的csr
+（0）生成私钥：openssl genrsa -out client.key 2048
+（1）生成csr：openssl req -new -key client.key -out client.csr -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=client-cert.com"
+
+# 服务器将该csr发往ca进行注册。
+
+2 ca根据csr生成一个包含中间证书的证书链：
+（0）生成中间证书
+a 生成中间证书的私钥：openssl genrsa -out middle.key 2048
+b 生成中间证书的csr：openssl req -new -key middle.key -out middle.csr -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=middle-cert.com"
+c 使用根证书给csr签名以生成中间证书：openssl x509 -req -in middle.csr -CA root.crt -CAkey root.key -CAcreateserial -out middle.crt -days 365 -sha256 -extfile <(printf "[v3_ca]\nkeyUsage=critical, cRLSign, keyCertSign\nbasicConstraints=critical,CA:TRUE") -extensions v3_ca
+（1）使用中间证书给用户csr签名以生成用户证书：openssl x509 -req -in client.csr -CA middle.crt -CAkey middle.key -CAcreateserial -out client.crt -days 365 -sha256
+
+# 将不包含根证书包含中间证书和用户证书的证书链响应给网站服务器。
+
+3 服务器打包证书链为p12文件：openssl pkcs12 -export -out client_certs.p12 -in client.crt -inkey client.key -certfile middle.crt
+
+# 将p12传输至客户端
+
+4 客户端解析p12文件
+（0）得到私钥：openssl pkcs12 -in client_certs.p12 -nocerts -out client1.key   // cpmpare with client.key
+（1）得到证书：openssl pkcs12 -in client_certs.p12 -clcerts -nokeys -out client1.crt // compare with client.crt
+（2）得到上级证书：openssl pkcs12 -in client_certs.p12 -cacerts -nokeys -out chains.crt   // compare with middle.crt
+注意：
+（0）如果有多个上级证书，分离只能用openssl x509 -in up_certs.crt -text -noout
+（1）你验证的时候不要使用diff或者md5sum直接验证源文件，因为格式不一样，你可以将其使用openssl x509 -in <file> -text -noout解析之后再对比。
+
+# 客户端将在tls通信中应用拿到的客户端证书链。
+
+
+
+
+
+
+
+十 PKCS #15
+（零）概念：定义存储和管理公钥证书和相关私钥的标准，主要用于智能卡和其他安全硬件的管理。
+
