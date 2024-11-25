@@ -168,8 +168,6 @@ openssl smime -verify -in message.p7m -inform DER -CAfile ca.pem -out verified_m
 （零）概念：定义与公钥证书相关的属性和扩展，提供公钥证书中使用的属性的标准化格式。
 注意：X509是国际电信联盟对PKCS#9的具体实现，已成为证书格式的事实标准。
 
-
-
 （一）生成X509格式的自签名证书
 0 单命令生成：generate self-sign cert: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout private.key -out certificate.crt -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=example.com"
 
