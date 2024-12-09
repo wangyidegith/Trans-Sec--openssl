@@ -1,1 +1,3 @@
 openssl sha256 <file> -out <file>
+
+echo -n "your_message" | openssl dgst -sha256 -hmac "your_secret_key"

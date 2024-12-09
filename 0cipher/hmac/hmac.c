@@ -3,7 +3,7 @@
 #include <string.h>
 
 void main() {
-    unsigned char *key = (unsigned char *)"secret";
+    unsigned char *key = (unsigned char *)"secret1";
     unsigned char *data = (unsigned char *)"message";
     unsigned char hmac[EVP_MAX_MD_SIZE];
     unsigned int hmac_len;

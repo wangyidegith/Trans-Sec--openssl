@@ -112,6 +112,7 @@ openssl enc -d -aes-128-ecb -in ciphertext.bin -out decrypted.txt -pbkdf2 -iter 
 0 7用于应用层，1不在应用层，换句话说，7提供了协议，1只是算法;
 
 1 所谓7提供了协议是指7生成的文件是包含原始消息、公钥、签名的，7需要定义协议的格式即怎么组织原始消息、公钥和签名及其他数据比如时间戳、签名者身份等信息为一个文件，7需要定义封装和解封的函数，1就相当于是7的底层组件;
+注意：上面只说了公钥的，PKCS7还定义了一种叫数字信封的格式，即包含使用接收者公钥加密的对称密钥和使用该堆成密钥的加密的数据。
 
 2 区别在签名验签服务器中有着充分的体现：签名验签服务器要求给定两套签名验签函数，一套用作数据签名验签（含多包），这便是1，一套用于消息的签名验签（不含多包），这是7。
 
@@ -174,7 +175,9 @@ openssl smime -verify -in message.p7m -inform DER -CAfile ca.pem -out verified_m
 1 逐步生成
 （0）生成私钥：openssl genrsa -out private.key 2048
 （1）生成csr：openssl req -new -key private.key -out request.csr -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=example.com"
-注意：如果你不生成自签名证书，而是要去某个CA那里注册，那么到这就可以了，你接下来要去做的事情是，拿着request.csr去注册。
+注意：
+a 如果你不生成自签名证书，而是要去某个CA那里注册，那么到这就可以了，你接下来要去做的事情是，拿着request.csr去注册。
+b 如何查看csr？openssl req -text -noout -in request.csr
 （2）生成证书：openssl x509 -req -days 365 -in request.csr -signkey private.key -out certificate.crt
 
 
