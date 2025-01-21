@@ -1,29 +1,4 @@
-零 概述：总共20个函数，分为请求10个和响应10个，我们认为请求响应算一个功能，那么就是10个功能，10个功能分两类：证书的签名验签8个，消息的签名验签2个。
-（零）请求
-signData
-verifySignedData
-signDataInit
-signDataUpdate
-signDataFinal
-verifySignedDataInit
-verifySignedDataUpdate
-verifySignedDataFinal
-signMessage
-verifySignedMessage
-
-
-
-（一）响应
-signData2
-verifySignedData2
-signDataInit2
-signDataUpdate2
-signDataFinal2
-verifySignedDataInit2
-verifySignedDataUpdate2
-verifySignedDataFinal2
-signMessage2
-verifySignedMessage2
+零 
 
 
 

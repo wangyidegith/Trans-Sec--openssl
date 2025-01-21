@@ -1,6 +1,6 @@
 PKCS #5
 （零）概念
-0 定义密码基于密码的密钥派生和加密标准，提供一种通过密码生成密钥的方法。
+0 定义基于密码的密钥派生和加密标准。
 
 1 注意：这个算法并不用于生成私钥，而是用于生成对称密钥
 
@@ -25,14 +25,14 @@ PKCS #5
 （3）默认会带iv，而且不能禁用，任何模式都是包括ecb。
 1 指定salt：
 （0）openssl rand -hex 8
-（1）openssl enc -aes-256-cbc -pbkdf2 -k your_password -P -md sha256 -S a生成的盐值
+（1）openssl enc -aes-256-cbc -pbkdf2 -k your_password -P -md sha256 -S 生成的盐值
 
 
 
 （二）aes加解密(假设ecb)：
 0 加密
 （1）openssl rand -hex 8
-（2）openssl enc -aes-128-ecb -in plaintext.txt -out ciphertext.bin -pbkdf2 -iter 100000 -k your_password -S a生成的盐值
+（2）openssl enc -aes-128-ecb -in plaintext.txt -out ciphertext.bin -pbkdf2 -iter 100000 -k your_password -S 生成的盐值
 1 解密
-openssl enc -d -aes-128-ecb -in ciphertext.bin -out decrypted.txt -pbkdf2 -iter 100000 -k your_password -S a生成的盐值
+openssl enc -d -aes-128-ecb -in ciphertext.bin -out decrypted.txt -pbkdf2 -iter 100000 -k your_password -S 生成的盐值
 
